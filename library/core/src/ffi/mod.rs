@@ -108,6 +108,29 @@ type_alias! { "c_ulonglong.md", c_ulonglong = u64, NonZero_c_ulonglong = NonZero
 #[stable(feature = "core_ffi_c", since = "1.64.0")]
 }
 
+type_alias! { "c_intmax_t.md", c_intmax_t = i64, NonZero_c_intmax_t = NonZeroI64;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+type_alias! { "c_uintmax_t.md", c_uintmax_t = u64, NonZero_c_uintmax_t = NonZeroU64;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+
+type_alias! { "c_intptr_t.md", c_intptr_t = isize, NonZero_c_intptr_t = NonZeroIsize;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+type_alias! { "c_uintptr_t.md", c_uintptr_t = usize, NonZero_c_uintptr_t = NonZeroUsize;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+
+type_alias! { ".md", c_wchar_t = isize, NonZero_c_wchar_t = NonZeroIsize;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+
+type_alias! { "c_wchar_t.md", c_wchar_t = c_wchar_t_definition::c_wchar_t, NonZero_c_wchar_t = c_wchar_t_definition::NonZero_c_wchar_t;
+#[doc(cfg(all()))]
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+
 type_alias_no_nz! { "c_float.md", c_float = f32;
 #[stable(feature = "core_ffi_c", since = "1.64.0")]
 }
@@ -213,6 +236,18 @@ mod c_long_definition {
             pub type NonZero_c_long = crate::num::NonZeroI32;
             pub type c_ulong = u32;
             pub type NonZero_c_ulong = crate::num::NonZeroU32;
+        }
+    }
+}
+
+mod c_wchar_t_definition {
+    cfg_if! {
+        if #[cfg(windows)] {
+            pub type c_wchar_t = u16;
+            pub type NonZero_c_wchar_t = crate::num::NonZeroU16;
+        } else {
+            pub type c_wchar_t = u32;
+            pub type NonZero_c_wchar_t = crate::num::NonZeroU16;
         }
     }
 }
