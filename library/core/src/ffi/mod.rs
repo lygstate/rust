@@ -30,22 +30,100 @@ pub mod c_str;
 )]
 pub use self::va_list::{VaArgSafe, VaList, VaListImpl};
 
-#[unstable(
-    feature = "c_variadic",
-    issue = "44930",
-    reason = "the `c_variadic` feature has not been properly tested on all supported platforms"
-)]
-pub mod va_list;
+macro_rules! type_alias_no_nz {
+    {
+      $Docfile:tt, $Alias:ident = $Real:ty;
+      $( $Cfg:tt )*
+    } => {
+        #[doc = include_str!($Docfile)]
+        $( $Cfg )*
+        pub type $Alias = $Real;
+    }
+}
 
-mod primitives;
+// To verify that the NonZero types in this file's macro invocations correspond
+//
+//  perl -n < library/std/src/os/raw/mod.rs -e 'next unless m/type_alias\!/; die "$_ ?" unless m/, (c_\w+) = (\w+), NonZero_(\w+) = NonZero(\w+)/; die "$_ ?" unless $3 eq $1 and $4 eq ucfirst $2'
+//
+// NB this does not check that the main c_* types are right.
+
+macro_rules! type_alias {
+    {
+      $Docfile:tt, $Alias:ident = $Real:ty, $NZAlias:ident = $NZReal:ty;
+      $( $Cfg:tt )*
+    } => {
+        type_alias_no_nz! { $Docfile, $Alias = $Real; $( $Cfg )* }
+
+        #[doc = concat!("Type alias for `NonZero` version of [`", stringify!($Alias), "`]")]
+        #[unstable(feature = "raw_os_nonzero", issue = "82363")]
+        $( $Cfg )*
+        pub type $NZAlias = $NZReal;
+    }
+}
+
+type_alias! { "c_char.md", c_char = c_char_definition::c_char, NonZero_c_char = c_char_definition::NonZero_c_char;
+// Make this type alias appear cfg-dependent so that Clippy does not suggest
+// replacing `0 as c_char` with `0_i8`/`0_u8`. This #[cfg(all())] can be removed
+// after the false positive in https://github.com/rust-lang/rust-clippy/issues/8093
+// is fixed.
+#[cfg(all())]
+#[doc(cfg(all()))]
 #[stable(feature = "core_ffi_c", since = "1.64.0")]
-pub use self::primitives::{
-    c_char, c_double, c_float, c_int, c_long, c_longlong, c_schar, c_short, c_uchar, c_uint,
-    c_ulong, c_ulonglong, c_ushort,
-};
-#[unstable(feature = "c_size_t", issue = "88345")]
-pub use self::primitives::{c_ptrdiff_t, c_size_t, c_ssize_t};
+}
 
+type_alias! { "c_schar.md", c_schar = i8, NonZero_c_schar = NonZeroI8;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias! { "c_uchar.md", c_uchar = u8, NonZero_c_uchar = NonZeroU8;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias! { "c_short.md", c_short = i16, NonZero_c_short = NonZeroI16;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias! { "c_ushort.md", c_ushort = u16, NonZero_c_ushort = NonZeroU16;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+
+type_alias! { "c_int.md", c_int = c_int_definition::c_int, NonZero_c_int = c_int_definition::NonZero_c_int;
+#[doc(cfg(all()))]
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias! { "c_uint.md", c_uint = c_int_definition::c_uint, NonZero_c_uint = c_int_definition::NonZero_c_uint;
+#[doc(cfg(all()))]
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+
+type_alias! { "c_long.md", c_long = c_long_definition::c_long, NonZero_c_long = c_long_definition::NonZero_c_long;
+#[doc(cfg(all()))]
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias! { "c_ulong.md", c_ulong = c_long_definition::c_ulong, NonZero_c_ulong = c_long_definition::NonZero_c_ulong;
+#[doc(cfg(all()))]
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+
+type_alias! { "c_longlong.md", c_longlong = i64, NonZero_c_longlong = NonZeroI64;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias! { "c_ulonglong.md", c_ulonglong = u64, NonZero_c_ulonglong = NonZeroU64;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+
+type_alias_no_nz! { "c_float.md", c_float = f32;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+type_alias_no_nz! { "c_double.md", c_double = f64;
+#[stable(feature = "core_ffi_c", since = "1.64.0")]
+}
+
+/// Equivalent to C's `size_t` type, from `stddef.h` (or `cstddef` for C++).
+///
+/// This type is currently always [`usize`], however in the future there may be
+/// platforms where this is not the case.
+#[unstable(feature = "c_size_t", issue = "88345")]
+pub type c_size_t = usize;
+
+/// Equivalent to C's `ptrdiff_t` type, from `stddef.h` (or `cstddef` for C++).
 // N.B., for LLVM to recognize the void pointer type and by extension
 //     functions like malloc(), we need to have it represented as i8* in
 //     LLVM bitcode. The enum used here ensures this and prevents misuse
