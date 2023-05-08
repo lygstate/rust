@@ -116,14 +116,108 @@ type_alias_no_nz! { "c_double.md", c_double = f64;
 #[stable(feature = "core_ffi_c", since = "1.64.0")]
 }
 
-/// Equivalent to C's `size_t` type, from `stddef.h` (or `cstddef` for C++).
-///
-/// This type is currently always [`usize`], however in the future there may be
-/// platforms where this is not the case.
+type_alias! { "c_size_t.md", c_size_t = usize, NonZero_c_size_t = NonZeroUsize;
 #[unstable(feature = "c_size_t", issue = "88345")]
-pub type c_size_t = usize;
+}
+type_alias! { "c_ptrdiff_t.md", c_ptrdiff_t = isize, NonZero_c_ptrdiff_t = NonZeroIsize;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
+type_alias! { "c_ssize_t.md", c_ssize_t = isize, NonZero_c_ssize_t = NonZeroIsize;
+#[unstable(feature = "c_size_t", issue = "88345")]
+}
 
-/// Equivalent to C's `ptrdiff_t` type, from `stddef.h` (or `cstddef` for C++).
+mod c_char_definition {
+    cfg_if! {
+        // These are the targets on which c_char is unsigned.
+        if #[cfg(any(
+            all(
+                target_os = "linux",
+                any(
+                    target_arch = "aarch64",
+                    target_arch = "arm",
+                    target_arch = "hexagon",
+                    target_arch = "powerpc",
+                    target_arch = "powerpc64",
+                    target_arch = "s390x",
+                    target_arch = "riscv64",
+                    target_arch = "riscv32"
+                )
+            ),
+            all(target_os = "android", any(target_arch = "aarch64", target_arch = "arm")),
+            all(target_os = "l4re", target_arch = "x86_64"),
+            all(
+                any(target_os = "freebsd", target_os = "openbsd"),
+                any(
+                    target_arch = "aarch64",
+                    target_arch = "arm",
+                    target_arch = "powerpc",
+                    target_arch = "powerpc64",
+                    target_arch = "riscv64"
+                )
+            ),
+            all(
+                target_os = "netbsd",
+                any(target_arch = "aarch64", target_arch = "arm", target_arch = "powerpc")
+            ),
+            all(
+                target_os = "vxworks",
+                any(
+                    target_arch = "aarch64",
+                    target_arch = "arm",
+                    target_arch = "powerpc64",
+                    target_arch = "powerpc"
+                )
+            ),
+            all(
+                target_os = "fuchsia",
+                any(target_arch = "aarch64", target_arch = "riscv64")
+            ),
+            all(target_os = "nto", target_arch = "aarch64"),
+            target_os = "horizon"
+        ))] {
+            pub type c_char = u8;
+            pub type NonZero_c_char = crate::num::NonZeroU8;
+        } else {
+            // On every other target, c_char is signed.
+            pub type c_char = i8;
+            pub type NonZero_c_char = crate::num::NonZeroI8;
+        }
+    }
+}
+
+mod c_int_definition {
+    cfg_if! {
+        if #[cfg(any(target_arch = "avr", target_arch = "msp430"))] {
+            pub type c_int = i16;
+            pub type NonZero_c_int = crate::num::NonZeroI16;
+            pub type c_uint = u16;
+            pub type NonZero_c_uint = crate::num::NonZeroU16;
+        } else {
+            pub type c_int = i32;
+            pub type NonZero_c_int = crate::num::NonZeroI32;
+            pub type c_uint = u32;
+            pub type NonZero_c_uint = crate::num::NonZeroU32;
+        }
+    }
+}
+
+mod c_long_definition {
+    cfg_if! {
+        if #[cfg(all(target_pointer_width = "64", not(windows)))] {
+            pub type c_long = i64;
+            pub type NonZero_c_long = crate::num::NonZeroI64;
+            pub type c_ulong = u64;
+            pub type NonZero_c_ulong = crate::num::NonZeroU64;
+        } else {
+            // The minimal size of `long` in the C standard is 32 bits
+            pub type c_long = i32;
+            pub type NonZero_c_long = crate::num::NonZeroI32;
+            pub type c_ulong = u32;
+            pub type NonZero_c_ulong = crate::num::NonZeroU32;
+        }
+    }
+}
+
 // N.B., for LLVM to recognize the void pointer type and by extension
 //     functions like malloc(), we need to have it represented as i8* in
 //     LLVM bitcode. The enum used here ensures this and prevents misuse
